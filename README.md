@@ -36,6 +36,9 @@ mise exec -- dotnet test tests/BatteryTray.Tests   # 75 个单测,纯逻辑在 W
 ```
 
 - 部署目标解析:命令行参数 > `deploy.target` 文件(本地偏好,已 gitignore)> `%USERPROFILE%\Downloads\BatteryTray`
+- **发版 = 改版本号**:`src/BatteryTray/BatteryTray.csproj` 的 `<Version>` 提交后,钩子自动打 `vX.Y.Z` tag,`git push` 时随 tag 一起推上并触发 Release 工作流(无需手动 `git tag`)
+  - 克隆后一次性启用:`git config core.hooksPath .githooks && git config push.followTags true`
+  - 前提:Release 只有 tag 才触发;没装钩子时可手动 `git tag -a vX.Y.Z -m "…" && git push origin vX.Y.Z`
 - `deploy.sh` 用 `powershell.exe` interop 把产物从 `\\wsl$` 拉到 Windows(WSL 对 `C:\Users` 无 ACL 权限,直接拷会被拒);路径经 `WSLENV=PS_DEST/w` 传入
 - 技术栈:C# / .NET 8 / WinForms,TFM `net8.0-windows10.0.19041.0`(WinRT 投影),`EnableWindowsTargeting` 允许 Linux 上构建
 - 结构:`src/BatteryTray.Core` 纯逻辑层(协议规则/合并/阈值,全部可单测)+ `src/BatteryTray` WinForms/WinRT 层
