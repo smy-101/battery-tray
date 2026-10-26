@@ -34,6 +34,12 @@ internal sealed class TrayApp : IDisposable
         menu.Items.Add("设置…", null, (_, _) => ShowSettings());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("退出", null, (_, _) => Application.Exit());
+        menu.Items.Add(new ToolStripSeparator());
+        var build = Environment.ProcessPath is { } p && File.Exists(p)
+            ? File.GetLastWriteTime(p).ToString("HH:mm:ss") : "?";
+        var versionItem = new ToolStripMenuItem($"v{GetType().Assembly.GetName().Version?.ToString(3)} · 构建 {build}")
+        { Enabled = false };
+        menu.Items.Add(versionItem);
 
         _icon = BatteryIcon.Draw(1.0f, known: false);
         _notifyIcon = new NotifyIcon
