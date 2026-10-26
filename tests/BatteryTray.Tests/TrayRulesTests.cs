@@ -30,6 +30,17 @@ public class TrayRulesTests
         Assert.Null(TrayRules.MinBatteryPercent(Array.Empty<DeviceEntry>()));
     }
 
+    [Theory]
+    [InlineData(null, BatteryBand.None)]
+    [InlineData((byte)0, BatteryBand.Low)]
+    [InlineData((byte)20, BatteryBand.Low)]
+    [InlineData((byte)21, BatteryBand.Warn)]
+    [InlineData((byte)40, BatteryBand.Warn)]
+    [InlineData((byte)41, BatteryBand.Good)]
+    [InlineData((byte)100, BatteryBand.Good)]
+    public void 电量档位_与托盘颜色阈值一致(byte? percent, BatteryBand expected)
+        => Assert.Equal(expected, TrayRules.BandOf(percent));
+
     [Fact]
     public void 提醒_跌破阈值_要弹()
     {

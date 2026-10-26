@@ -1,8 +1,9 @@
 using System.Drawing;
+using BatteryTray.Core;
 
 namespace BatteryTray;
 
-/// <summary>运行时绘制托盘电池图标(避免内嵌二进制资源)。</summary>
+/// <summary>运行时绘制托盘电池图标(避免内嵌二进制资源)。配色与面板共用 TrayRules.BandOf。</summary>
 internal static class BatteryIcon
 {
     /// <summary>level ∈ [0,1];known=false 时画空心(无任何可读电量的设备)。</summary>
@@ -13,12 +14,10 @@ internal static class BatteryIcon
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         g.Clear(Color.Transparent);
 
-        Color fill = !known ? Color.Transparent : level switch
-        {
-            > 0.40f => Color.FromArgb(46, 204, 113),
-            > 0.20f => Color.FromArgb(241, 196, 15),
-            _       => Color.FromArgb(231, 76, 60),
-        };
+        var band = known
+            ? TrayRules.BandOf((byte)Math.Clamp((int)Math.Ceiling(level * 100), 0, 100))
+            : BatteryBand.None;
+        Color fill = UiTheme.BandColor(band);
 
         // 电池主体(留 1px 边距),右侧小凸头;以 32px 基准等比缩放
         float s = size / 32f;

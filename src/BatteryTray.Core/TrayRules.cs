@@ -1,8 +1,20 @@
 namespace BatteryTray.Core;
 
-/// <summary>托盘呈现规则(纯函数,WSL 可测):图标取色与低电量提醒判定。</summary>
+/// <summary>电量档位(GLOSSARY 托盘颜色规则):>40 绿,21–40 黄,≤20 红;None = 读取不到。</summary>
+public enum BatteryBand { None, Good, Warn, Low }
+
+/// <summary>托盘呈现规则(纯函数,WSL 可测):图标取色、电量档位与低电量提醒判定。</summary>
 public static class TrayRules
 {
+    /// <summary>百分比 → 档位;null → None。图标与设备面板共用同一阈值。</summary>
+    public static BatteryBand BandOf(byte? percent) => percent switch
+    {
+        null => BatteryBand.None,
+        > 40 => BatteryBand.Good,
+        > 20 => BatteryBand.Warn,
+        _ => BatteryBand.Low,
+    };
+
     /// <summary>
     /// 图标电量 = 全部"已连接且电量可读"设备中的最低值;
     /// 无可读设备返回 null(图标转空心灰)。

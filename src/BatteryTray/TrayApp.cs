@@ -102,6 +102,7 @@ internal sealed class TrayApp : IDisposable
             UpdateIcon(list);
             UpdateTooltip(list);
             if (_panel.Visible) _panel.UpdateEntries(list);
+            _panel.MarkScanned();
         }
         catch (Exception ex)
         {
