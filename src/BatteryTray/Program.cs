@@ -87,7 +87,7 @@ internal static class Program
         var entries = new DeviceEntry[]
         {
             new() { Name = "Keychron K3 Pro", Transport = Transport.BluetoothLe, IsConnected = true, BatteryPercent = 85, Source = "Gatt" },
-            new() { Name = "HUAWEI FreeClip", Transport = Transport.BluetoothClassic, IsConnected = true, BatteryPercent = 40, Source = "Hfp" },
+            new() { Name = "HUAWEI FreeClip", Transport = Transport.BluetoothClassic, IsConnected = true, BatteryPercent = 100, Source = "Hfp" },
             new() { Name = "MX Master 3S", Transport = Transport.UsbHid, IsConnected = true, BatteryPercent = 15, Source = "Hidpp" },
             new() { Name = "Surface 蓝牙鼠标", Transport = Transport.BluetoothClassic, IsConnected = true, BatteryPercent = null },
             new() { Name = "AirPods Pro", Transport = Transport.BluetoothClassic, IsConnected = false, BatteryPercent = null },

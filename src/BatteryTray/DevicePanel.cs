@@ -10,7 +10,9 @@ namespace BatteryTray;
 internal sealed class DevicePanel : Form
 {
     private const int ColTransport = 160;
-    private const int ColBattery = 124;
+    // 电量列宽需容下最宽文本"100%"(~40px)+ 电量条 56 + 左右留白,
+    // 尺寸不足时右对齐百分比会被裁掉左侧(只看到"00%")
+    private const int ColBattery = 144;
 
     /// <summary>双缓冲 ListView,自绘不闪烁。</summary>
     private sealed class PanelListView : ListView
