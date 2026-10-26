@@ -24,6 +24,7 @@ internal static class Program
     private static int RunDump()
     {
         Console.WriteLine($"BatteryTray v{typeof(Program).Assembly.GetName().Version}");
+        BluetoothScanner.DebugLog = m => Console.WriteLine(m);
         using var scanner = new BluetoothScanner();
         // WinRT 异步在线程池(MTA)上完成,避免 STA 阻塞
         var scan = Task.Run(() => scanner.ScanAsync());

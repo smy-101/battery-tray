@@ -34,6 +34,9 @@ internal sealed class BluetoothScanner : IDisposable
     /// <summary>设备增删/属性变化。可能在任意线程触发,订阅方负责去抖。</summary>
     public event Action? Changed;
 
+    /// <summary>诊断日志(--dump 挂接,正常运行为 null)。</summary>
+    public static Action<string>? DebugLog { get; set; }
+
     private static (string Selector, Transport Transport)[] Selectors() => new[]
     {
         (BluetoothDevice.GetDeviceSelectorFromPairingState(true), Transport.BluetoothClassic),
@@ -95,10 +98,15 @@ internal sealed class BluetoothScanner : IDisposable
                 || e.BatteryPercent is not null || e.DeviceId is null)
                 continue;
 
-            var address = await GetClassicAddressAsync(e.DeviceId);
+            // 优先直接从 AEP id 解析地址(零开销);解析不到再开 BluetoothDevice 问
+            var address = BluetoothAddressRules.TryParseFromAepId(e.DeviceId, out var parsed)
+                ? parsed
+                : await GetClassicAddressAsync(e.DeviceId);
+            DebugLog?.Invoke($"[HFP] {e.Name} id={e.DeviceId} addr={address ?? "<null>"}");
             if (address is null) continue;
 
             var level = await Task.Run(() => HfpBatteryReader.Read(address));
+            DebugLog?.Invoke($"[HFP] {e.Name} level={(level is byte b ? b : "<null>")}");
             if (level is not null)
                 entries[i] = e with { BatteryPercent = level, Source = "HfpDevProp" };
         }
