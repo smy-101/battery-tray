@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <!-- 允许在 Linux 上构建 Windows 目标 -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
@@ -15,5 +15,9 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <Version>0.1.0</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BatteryTray.Core\BatteryTray.Core.csproj" />
+  </ItemGroup>
 
 </Project>
