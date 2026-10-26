@@ -28,6 +28,9 @@ internal sealed class BluetoothScanner : IDisposable
     private static readonly string[] ConnectionProps = { PConnected, PPaired };
     private static readonly string[] BatteryProps = { PConnected, PPaired, PBattery };
 
+    /// <summary>单台 BLE 设备 GATT 读取的兜底上限:防止蓝牙栈偶发挂起拖住整轮扫描。</summary>
+    private const int GattTimeoutMs = 10_000;
+
     private readonly List<DeviceWatcher> _watchers = new();
     private bool _disposed;
 
@@ -92,20 +95,36 @@ internal sealed class BluetoothScanner : IDisposable
 
     /// <summary>
     /// AEP 属性没有电量的已连接 BLE 设备 → GATT 电池服务实时读。
+    /// 各设备连接相互独立,并行读(串行会让慢设备延迟线性叠加)。
     /// </summary>
     private static async Task FillLeGattBatteryAsync(List<DeviceEntry> entries)
     {
+        var pending = new List<Task<(int Index, byte? Level)>>();
         for (var i = 0; i < entries.Count; i++)
         {
             var e = entries[i];
             if (e.Transport != Transport.BluetoothLe || !e.IsConnected
                 || e.BatteryPercent is not null || e.DeviceId is null)
                 continue;
+            pending.Add(ReadDeviceBatteryAsync(i, e.Name, e.DeviceId));
+        }
 
-            var level = await GattBatteryReader.ReadAsync(e.DeviceId);
-            DebugLog?.Invoke($"[GATT] {e.Name} level={(level is byte b ? b : "<null>")}");
-            if (level is not null)
-                entries[i] = e with { BatteryPercent = level, Source = "Gatt" };
+        // 写回在 WhenAll 之后统一进行,不与并行读交叉
+        foreach (var result in await Task.WhenAll(pending))
+        {
+            if (result.Level is not null)
+                entries[result.Index] = entries[result.Index] with
+                {
+                    BatteryPercent = result.Level,
+                    Source = "Gatt",
+                };
+        }
+
+        async Task<(int Index, byte? Level)> ReadDeviceBatteryAsync(int index, string name, string deviceId)
+        {
+            var level = await WinRtTimeout.After(GattBatteryReader.ReadAsync(deviceId), GattTimeoutMs);
+            DebugLog?.Invoke($"[GATT] {name} level={(level is byte b ? b : "<null>")}");
+            return (index, level);
         }
     }
 

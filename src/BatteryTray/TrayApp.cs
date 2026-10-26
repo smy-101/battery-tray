@@ -23,6 +23,7 @@ internal sealed class TrayApp : IDisposable
     private Icon? _icon;
     private nint _lastHicon;
     private List<DeviceEntry> _lastEntries = new();
+    private bool _scanning;
     private bool _disposed;
 
     public TrayApp()
@@ -86,6 +87,11 @@ internal sealed class TrayApp : IDisposable
 
     private async Task ScanSafe()
     {
+        // 只从 UI 线程调用(Timer/菜单/构造器),标志无需锁。
+        // 慢设备 + 短轮询间隔时上一轮可能尚未结束:跳过本轮,
+        // 避免两轮并发(BLE 设备通常只接受一条 GATT 连接,HID++ 帧也会交叉)。
+        if (_scanning) return;
+        _scanning = true;
         try
         {
             var raw = await _scanner.ScanAsync();
@@ -108,6 +114,10 @@ internal sealed class TrayApp : IDisposable
         {
             Log.Warn("扫描失败", ex);
             _notifyIcon.Text = "BatteryTray — 扫描失败";
+        }
+        finally
+        {
+            _scanning = false;
         }
     }
 

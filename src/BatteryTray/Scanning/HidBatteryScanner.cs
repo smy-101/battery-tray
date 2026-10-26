@@ -15,6 +15,9 @@ internal static class HidBatteryScanner
 {
     private const string Selector = "System.DeviceInterface.Hid.UsagePage:=133"; // 0x85
 
+    /// <summary>输入报告等待上限:多数设备在打开/电量变化时上报,不上报的不值得永久等。</summary>
+    private const int InputReportTimeoutMs = 3_000;
+
     public static async Task<List<DeviceEntry>> ScanAsync()
     {
         var result = new List<DeviceEntry>();
@@ -41,7 +44,10 @@ internal static class HidBatteryScanner
                 if (hid is null) continue; // 被系统占用(键鼠页被独占)等
                 using (hid)
                 {
-                    var report = await hid.GetInputReportAsync();
+                    // 无超时的裸 await 会被“只在电量变化时上报”的设备永久挂起,
+                    // 拖住整轮扫描;超时放弃本轮,下一轮轮询再试
+                    var report = await WinRtTimeout.After(
+                        hid.GetInputReportAsync().AsTask(), InputReportTimeoutMs);
                     if (report?.Data is { Length: > 0 } buffer)
                     {
                         var bytes = new byte[buffer.Length];
