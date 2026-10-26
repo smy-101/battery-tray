@@ -29,7 +29,8 @@ internal static class BatteryIcon
         if (known)
         {
             float w = inset.Width * Math.Clamp(level, 0f, 1f);
-            g.FillRectangle(new SolidBrush(fill), inset.X, inset.Y, w, inset.Height);
+            using var fillBrush = new SolidBrush(fill);
+            g.FillRectangle(fillBrush, inset.X, inset.Y, w, inset.Height);
         }
         else
         {

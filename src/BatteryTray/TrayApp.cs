@@ -23,6 +23,8 @@ internal sealed class TrayApp : IDisposable
     private readonly System.Windows.Forms.Timer _debounce;
     private Icon? _icon;
     private nint _lastHicon;
+    /// <summary>上次绘制托盘图标的最低电量(null=空心);相同则跳过重绘,省 GDI 图标创建/销毁。</summary>
+    private byte? _lastIconMin;
     private List<DeviceEntry> _lastEntries = new();
     private bool _scanning;
     private bool _disposed;
@@ -44,6 +46,7 @@ internal sealed class TrayApp : IDisposable
         menu.Items.Add(versionItem);
 
         _icon = BatteryIcon.Draw(1.0f, known: false);
+        _lastHicon = _icon.Handle; // Icon.FromHandle 不拥有句柄:登记后首个 UpdateIcon/Dispose 才能销毁它
         _notifyIcon = new NotifyIcon
         {
             Icon = _icon,
@@ -127,6 +130,8 @@ internal sealed class TrayApp : IDisposable
     private void UpdateIcon(IReadOnlyList<DeviceEntry> list)
     {
         var min = TrayRules.MinBatteryPercent(list);
+        if (min == _lastIconMin) return; // 电量没变不重绘(初始 null 恰与构造器的空心态一致)
+        _lastIconMin = min;
         var icon = BatteryIcon.Draw((min ?? 100) / 100f, known: min is not null);
         var old = _notifyIcon.Icon;
         _notifyIcon.Icon = icon;
