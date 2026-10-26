@@ -21,7 +21,7 @@ public class BluetoothAddressRulesTests
     [InlineData("")]
     [InlineData(null)]
     [InlineData("USB\\VID_046D&PID_C52B\\5&2f3a")]                 // 无地址
-    public void 无经典地址或空_id(string id)
+    public void 无经典地址或空_id(string? id)
     {
         // 这些要么解析失败,要么仅当含合法 MAC 时成功;关键是不抛异常
         BluetoothAddressRules.TryParseFromAepId(id, out _);

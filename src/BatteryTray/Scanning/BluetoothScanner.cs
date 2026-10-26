@@ -84,7 +84,29 @@ internal sealed class BluetoothScanner : IDisposable
         }
 
         await FillClassicHfpBatteryAsync(entries);
+        await FillLeGattBatteryAsync(entries);
+        entries.AddRange(await HidBatteryScanner.ScanAsync());
+        entries.AddRange(await HidppBatteryScanner.ScanAsync());
         return entries;
+    }
+
+    /// <summary>
+    /// AEP 属性没有电量的已连接 BLE 设备 → GATT 电池服务实时读。
+    /// </summary>
+    private static async Task FillLeGattBatteryAsync(List<DeviceEntry> entries)
+    {
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var e = entries[i];
+            if (e.Transport != Transport.BluetoothLe || !e.IsConnected
+                || e.BatteryPercent is not null || e.DeviceId is null)
+                continue;
+
+            var level = await GattBatteryReader.ReadAsync(e.DeviceId);
+            DebugLog?.Invoke($"[GATT] {e.Name} level={(level is byte b ? b : "<null>")}");
+            if (level is not null)
+                entries[i] = e with { BatteryPercent = level, Source = "Gatt" };
+        }
     }
 
     /// <summary>
