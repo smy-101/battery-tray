@@ -65,6 +65,14 @@ internal sealed class TrayApp : IDisposable
         _scanner.Changed += OnScannerChanged;
         _ = ScanSafe();
         _scanner.StartWatchers();
+        Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
+    }
+
+    /// <summary>睡眠唤醒后设备重连需要时间:走去抖刷新,过一会儿自动重新扫描。</summary>
+    private void OnPowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+    {
+        if (e.Mode == Microsoft.Win32.PowerModes.Resume)
+            OnScannerChanged();
     }
 
     /// <summary>watcher 事件来自任意线程:Post 回 UI 线程重启去抖定时器。</summary>
@@ -94,8 +102,9 @@ internal sealed class TrayApp : IDisposable
             UpdateTooltip(list);
             if (_panel.Visible) _panel.UpdateEntries(list);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Log.Warn("扫描失败", ex);
             _notifyIcon.Text = "BatteryTray — 扫描失败";
         }
     }
@@ -152,6 +161,7 @@ internal sealed class TrayApp : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _poll.Dispose();
         _debounce.Dispose();
         _scanner.Dispose();

@@ -15,6 +15,10 @@ internal static class Program
             return RunDump();
         }
 
+        // 单实例:已有托盘实例时安静退出(dump 不受限)
+        using var mutex = new Mutex(true, @"Local\BatteryTray-SingleInstance", out bool isFirst);
+        if (!isFirst) return 0;
+
         ApplicationConfiguration.Initialize();
         using var app = new TrayApp();
         Application.Run();

@@ -58,9 +58,9 @@ internal static class HfpBatteryReader
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // 尽力而为:注册表结构异常/权限不足都按"读不到"处理
+            Log.Warn("HFP 读取异常 addr=" + bluetoothAddressHex, ex);
         }
         return null;
     }

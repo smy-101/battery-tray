@@ -53,15 +53,17 @@ internal sealed class BluetoothScanner : IDisposable
             {
                 devices = await DeviceInformation.FindAllAsync(selector, BatteryProps, DeviceInformationKind.AssociationEndpoint);
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Warn("AEP 枚举降级(经典/LE: " + transport + ")", ex);
                 // 属性集不被接受(老系统)→ 降级只请求连接属性
                 try
                 {
                     devices = await DeviceInformation.FindAllAsync(selector, ConnectionProps, DeviceInformationKind.AssociationEndpoint);
                 }
-                catch
+                catch (Exception ex2)
                 {
+                    Log.Warn("AEP 枚举失败(跳过: " + transport + ")", ex2);
                     continue; // 单个 selector 失败不拖垮整体
                 }
             }
@@ -122,8 +124,9 @@ internal sealed class BluetoothScanner : IDisposable
             try { return device.BluetoothAddress.ToString("X12"); }
             finally { device.Dispose(); }
         }
-        catch
+        catch (Exception ex)
         {
+            Log.Warn("FromIdAsync 取地址失败 " + aepId, ex);
             return null;
         }
     }
