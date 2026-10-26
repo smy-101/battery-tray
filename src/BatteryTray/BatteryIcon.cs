@@ -5,14 +5,15 @@ namespace BatteryTray;
 /// <summary>运行时绘制托盘电池图标(避免内嵌二进制资源)。</summary>
 internal static class BatteryIcon
 {
-    public static Icon Draw(float level, int size = 32)
+    /// <summary>level ∈ [0,1];known=false 时画空心(无任何可读电量的设备)。</summary>
+    public static Icon Draw(float level, bool known = true, int size = 32)
     {
         using var bmp = new Bitmap(size, size);
         using var g = Graphics.FromImage(bmp);
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         g.Clear(Color.Transparent);
 
-        Color fill = level switch
+        Color fill = !known ? Color.Transparent : level switch
         {
             > 0.40f => Color.FromArgb(46, 204, 113),
             > 0.20f => Color.FromArgb(241, 196, 15),
@@ -26,8 +27,16 @@ internal static class BatteryIcon
         g.FillRectangle(Brushes.White, body);
         g.FillRectangle(Brushes.White, cap);
         var inset = new RectangleF(body.X + 2 * s, body.Y + 2 * s, body.Width - 4 * s, body.Height - 4 * s);
-        float w = inset.Width * Math.Clamp(level, 0f, 1f);
-        g.FillRectangle(new SolidBrush(fill), inset.X, inset.Y, w, inset.Height);
+        if (known)
+        {
+            float w = inset.Width * Math.Clamp(level, 0f, 1f);
+            g.FillRectangle(new SolidBrush(fill), inset.X, inset.Y, w, inset.Height);
+        }
+        else
+        {
+            using var pen = new Pen(Color.FromArgb(200, 200, 200), 1.5f * s);
+            g.DrawRectangle(pen, Rectangle.Round(inset));
+        }
 
         return Icon.FromHandle(bmp.GetHicon());
     }

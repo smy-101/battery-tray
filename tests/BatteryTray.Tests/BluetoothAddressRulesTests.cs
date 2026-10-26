@@ -6,6 +6,7 @@ namespace BatteryTray.Tests;
 public class BluetoothAddressRulesTests
 {
     [Theory]
+    [InlineData("Bluetooth#Bluetooth14:b5:cd:85:74:96-c0:e5:79:27:ce:76", "C0E57927CE76")] // 真实样本:本机网卡+设备两个地址,取后者
     [InlineData("Bluetooth#BluetoothL#C0:E5:79:27:CE:76#-1#HUAWEI", "C0E57927CE76")]
     [InlineData("Bluetooth#BluetoothL#00:11:22:33:44:55#-1", "001122334455")]
     [InlineData("Bluetooth#DEV_C0E57927CE76#7&1&0", "C0E57927CE76")]

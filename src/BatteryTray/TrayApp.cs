@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using BatteryTray.Core;
 using BatteryTray.Scanning;
@@ -11,6 +12,7 @@ internal sealed class TrayApp : IDisposable
     private const int PollMs = 60_000;
     private const int DebounceMs = 2_000;
     private const int TooltipMax = 63; // NotifyIcon.Text 上限
+    private const byte LowBatteryThreshold = 20; // 设置项(第 6 步做成可配)
 
     private readonly NotifyIcon _notifyIcon;
     private readonly DevicePanel _panel = new();
@@ -20,6 +22,8 @@ internal sealed class TrayApp : IDisposable
     private readonly System.Windows.Forms.Timer _poll;
     private readonly System.Windows.Forms.Timer _debounce;
     private Icon? _icon;
+    private nint _lastHicon;
+    private List<DeviceEntry> _lastEntries = new();
     private bool _disposed;
 
     public TrayApp()
@@ -30,7 +34,7 @@ internal sealed class TrayApp : IDisposable
         menu.Items.Add("立即刷新", null, async (_, _) => await ScanSafe());
         menu.Items.Add("退出", null, (_, _) => Application.Exit());
 
-        _icon = BatteryIcon.Draw(1.0f);
+        _icon = BatteryIcon.Draw(1.0f, known: false);
         _notifyIcon = new NotifyIcon
         {
             Icon = _icon,
@@ -70,6 +74,16 @@ internal sealed class TrayApp : IDisposable
         {
             var raw = await _scanner.ScanAsync();
             var list = _catalog.ReplaceAll(raw);
+
+            // 低电量提醒:首读即低或跌破阈值时弹一次;持续低位不重复
+            var newlyLow = TrayRules.NewlyLow(_lastEntries, list, LowBatteryThreshold);
+            _lastEntries = list.ToList();
+            if (newlyLow.Count > 0)
+                _notifyIcon.ShowBalloonTip(5000, "BatteryTray 低电量",
+                    string.Join("\n", newlyLow.Select(d => $"{d.Name}:{d.BatteryPercent}%")),
+                    ToolTipIcon.Warning);
+
+            UpdateIcon(list);
             UpdateTooltip(list);
             if (_panel.Visible) _panel.UpdateEntries(list);
         }
@@ -78,6 +92,20 @@ internal sealed class TrayApp : IDisposable
             _notifyIcon.Text = "BatteryTray — 扫描失败";
         }
     }
+
+    private void UpdateIcon(IReadOnlyList<DeviceEntry> list)
+    {
+        var min = TrayRules.MinBatteryPercent(list);
+        var icon = BatteryIcon.Draw((min ?? 100) / 100f, known: min is not null);
+        var old = _notifyIcon.Icon;
+        _notifyIcon.Icon = icon;
+        old?.Dispose();
+        if (_lastHicon != 0) DestroyIcon(_lastHicon);
+        _lastHicon = icon.Handle;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool DestroyIcon(nint hIcon);
 
     private void UpdateTooltip(IReadOnlyList<DeviceEntry> list)
     {
@@ -111,6 +139,8 @@ internal sealed class TrayApp : IDisposable
         _panel.Dispose();
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
+        if (_lastHicon != 0) DestroyIcon(_lastHicon);
+        _lastHicon = 0;
         _icon?.Dispose();
         _icon = null;
     }

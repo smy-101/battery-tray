@@ -9,7 +9,7 @@ namespace BatteryTray.Core;
 /// </summary>
 public static partial class BluetoothAddressRules
 {
-    [GeneratedRegex(@"(?:^|[#_:])([0-9A-F]{2}(?::[0-9A-F]{2}){5})(?:$|[#_])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:^|[#_:-])([0-9A-F]{2}(?::[0-9A-F]{2}){5})(?:$|[#_-])", RegexOptions.IgnoreCase)]
     private static partial Regex ColonMacRegex();
 
     [GeneratedRegex(@"(?:^|[#_])([0-9A-F]{12})(?:$|[#_])", RegexOptions.IgnoreCase)]
