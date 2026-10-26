@@ -77,7 +77,47 @@ internal sealed class BluetoothScanner : IDisposable
                 });
             }
         }
+
+        await FillClassicHfpBatteryAsync(entries);
         return entries;
+    }
+
+    /// <summary>
+    /// AEP 属性没有电量的已连接经典蓝牙设备(典型:HFP 耳机),
+    /// 经注册表 BTHENUM + CfgMgr32 私有属性补读。
+    /// </summary>
+    private static async Task FillClassicHfpBatteryAsync(List<DeviceEntry> entries)
+    {
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var e = entries[i];
+            if (e.Transport != Transport.BluetoothClassic || !e.IsConnected
+                || e.BatteryPercent is not null || e.DeviceId is null)
+                continue;
+
+            var address = await GetClassicAddressAsync(e.DeviceId);
+            if (address is null) continue;
+
+            var level = await Task.Run(() => HfpBatteryReader.Read(address));
+            if (level is not null)
+                entries[i] = e with { BatteryPercent = level, Source = "HfpDevProp" };
+        }
+    }
+
+    /// <summary>从 AEP id 打开 BluetoothDevice 拿地址;失败/超时返回 null 不影响其他设备。</summary>
+    private static async Task<string?> GetClassicAddressAsync(string aepId)
+    {
+        try
+        {
+            var device = await BluetoothDevice.FromIdAsync(aepId);
+            if (device is null) return null;
+            try { return device.BluetoothAddress.ToString("X12"); }
+            finally { device.Dispose(); }
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public void StartWatchers()
