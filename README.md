@@ -30,10 +30,12 @@ Windows 系统托盘应用:实时显示已连接蓝牙 / 2.4G 外设的电量。
 
 ```bash
 mise exec -- dotnet test tests/BatteryTray.Tests   # 75 个单测,纯逻辑在 WSL 可跑
-./deploy.sh                                        # 编译 + 单文件发布 + 拷到 Windows
+./deploy.sh                                        # 编译 + 单文件发布 + 部署到 Windows
+./deploy.sh 'D:\Tools\BatteryTray'                # 或显式指定部署目标
 ```
 
-- `deploy.sh` 用 `powershell.exe` interop 把产物从 `\\wsl$` 拉到 `C:\Users\<user>\Downloads\BatteryTray\`(WSL 对 `C:\Users` 无 ACL 权限,直接拷会被拒)
+- 部署目标解析:命令行参数 > `deploy.target` 文件(本地偏好,已 gitignore)> `%USERPROFILE%\Downloads\BatteryTray`
+- `deploy.sh` 用 `powershell.exe` interop 把产物从 `\\wsl$` 拉到 Windows(WSL 对 `C:\Users` 无 ACL 权限,直接拷会被拒);路径经 `WSLENV=PS_DEST/w` 传入
 - 技术栈:C# / .NET 8 / WinForms,TFM `net8.0-windows10.0.19041.0`(WinRT 投影),`EnableWindowsTargeting` 允许 Linux 上构建
 - 结构:`src/BatteryTray.Core` 纯逻辑层(协议规则/合并/阈值,全部可单测)+ `src/BatteryTray` WinForms/WinRT 层
 
