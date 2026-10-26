@@ -43,4 +43,18 @@ public static class TrayRules
                         && (!prev.TryGetValue((a.Name, a.Transport), out var p) || p >= threshold))
             .ToList();
     }
+
+    /// <summary>
+    /// 截断到 maxLength(含结尾的 …),不切断 UTF-16 代理对(emoji 设备名);
+    /// NotifyIcon.Text 上限 63 字符,直接 Substring 可能把 emoji 切成孤立代理项产生非法字符串。
+    /// </summary>
+    public static string Ellipsize(string text, int maxLength)
+    {
+        if (maxLength <= 0) return string.Empty;
+        if (text.Length <= maxLength) return text;
+        var cut = maxLength - 1; // 留 … 的位置;保留区为 text[..cut],末字符是 text[cut-1]
+        if (cut > 0 && char.IsHighSurrogate(text[cut - 1]))
+            cut--; // 末字符是代理对前半:整对放弃
+        return text[..cut] + "…";
+    }
 }

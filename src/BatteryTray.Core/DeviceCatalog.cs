@@ -15,7 +15,12 @@ public sealed class DeviceCatalog
     }
 
     /// <summary>
-    /// 合并规则:同名同传输类型视为同一台设备——电量可读者优先,其次已连接者,否则保留先到者。
+    /// 合并规则:
+    /// 1) 同名同传输 → 同一设备的多个来源(AEP/GATT/HFP);
+    /// 2) 同名跨传输 → 同一台物理设备的两条枚举路径
+    ///    (双模耳机同时命中经典/LE 两个 AEP;蓝牙键鼠同时命中 AEP 与 HID 0x85),
+    ///    罗技接收器设备名带“· 槽N”后缀不受影响。
+    /// 电量可读者优先,其次已连接者,否则保留先到者。
     /// 排序:已连接在前,再按名称(ordinal)。
     /// </summary>
     public IReadOnlyList<DeviceEntry> ReplaceAll(IEnumerable<DeviceEntry> raw)
@@ -32,7 +37,18 @@ public sealed class DeviceCatalog
             merged[key] = Prefer(existing, entry);
         }
 
-        var list = merged.Values
+        var byName = new Dictionary<string, DeviceEntry>();
+        foreach (var entry in merged.Values)
+        {
+            if (!byName.TryGetValue(entry.Name, out var existing))
+            {
+                byName[entry.Name] = entry;
+                continue;
+            }
+            byName[entry.Name] = Prefer(existing, entry);
+        }
+
+        var list = byName.Values
             .OrderByDescending(e => e.IsConnected)
             .ThenBy(e => e.Name, StringComparer.Ordinal)
             .ToList();

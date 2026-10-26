@@ -23,16 +23,44 @@ public class DeviceCatalogTests
     }
 
     [Fact]
-    public void 同名不同传输_各自保留()
+    public void 同名不同传输_合并为一行_电量可读者优先()
     {
+        // 典型:蓝牙键鼠同时命中 AEP 枚举(蓝牙,无电量)与 HID 0x85(USB/2.4G,有电量)
+        var catalog = new DeviceCatalog();
+        var list = catalog.ReplaceAll(new[]
+        {
+            Entry("MX Keys", Transport.BluetoothClassic, battery: null),
+            Entry("MX Keys", Transport.UsbHid, battery: 80),
+        });
+        var item = Assert.Single(list);
+        Assert.Equal((byte?)80, item.BatteryPercent);
+        Assert.Equal(Transport.UsbHid, item.Transport);
+    }
+
+    [Fact]
+    public void 同名不同传输_双模耳机两行都有电量_保留先到者()
+    {
+        // 双模耳机同时命中经典/LE 两个 AEP,两条都有电量:确定性保留先到者
         var catalog = new DeviceCatalog();
         var list = catalog.ReplaceAll(new[]
         {
             Entry("WH-1000", Transport.BluetoothClassic, battery: 50),
             Entry("WH-1000", Transport.BluetoothLe, battery: 60),
         });
+        var item = Assert.Single(list);
+        Assert.Equal((byte?)50, item.BatteryPercent);
+    }
+
+    [Fact]
+    public void 不同名不同传输_各自保留()
+    {
+        var catalog = new DeviceCatalog();
+        var list = catalog.ReplaceAll(new[]
+        {
+            Entry("WH-1000", Transport.BluetoothClassic, battery: 50),
+            Entry("Keychron K3", Transport.BluetoothLe, battery: 60),
+        });
         Assert.Equal(2, list.Count);
-        Assert.Equal(2, list.Select(e => e.Transport).Distinct().Count());
     }
 
     [Fact]

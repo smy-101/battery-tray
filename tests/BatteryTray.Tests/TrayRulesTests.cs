@@ -91,4 +91,42 @@ public class TrayRulesTests
         var r3 = TrayRules.NewlyLow(new[] { Dev("A", 30) }, new[] { Dev("A", 18) }, 20);
         Assert.Single(r3);
     }
+
+    [Fact]
+    public void 截断_不超长_原样返回()
+    {
+        Assert.Equal("abc", TrayRules.Ellipsize("abc", 10));
+        Assert.Equal("abc", TrayRules.Ellipsize("abc", 3));
+    }
+
+    [Fact]
+    public void 截断_超长_以省略号结尾且不超上限()
+    {
+        var result = TrayRules.Ellipsize("abcdefghij", 5);
+        Assert.Equal("abcd…", result);
+        Assert.True(result.Length <= 5);
+    }
+
+    [Fact]
+    public void 截断_边界落在emoji上_不切代理对()
+    {
+        // 🎧 = 两个 UTF-16 单元;上限 5 恰好落在代理对中间 → 整对放弃
+        var result = TrayRules.Ellipsize("abc🎧xyz", 5);
+        Assert.Equal("abc…", result);
+        Assert.DoesNotContain(result, char.IsSurrogate);
+    }
+
+    [Fact]
+    public void 截断_emoji完整落在保留区_保留emoji()
+    {
+        // "ab🎧xyz" 长度 7,上限 6:保留区含完整 emoji
+        Assert.Equal("ab🎧x…", TrayRules.Ellipsize("ab🎧xyz", 6));
+    }
+
+    [Fact]
+    public void 截断_上限为1_只剩省略号()
+    {
+        Assert.Equal("…", TrayRules.Ellipsize("abc🎧xyz", 1));
+        Assert.Equal(string.Empty, TrayRules.Ellipsize("abc", 0));
+    }
 }

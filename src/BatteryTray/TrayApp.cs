@@ -16,6 +16,7 @@ internal sealed class TrayApp : IDisposable
     private readonly DevicePanel _panel = new();
     private readonly DeviceCatalog _catalog = new();
     private readonly BluetoothScanner _scanner = new();
+    private readonly HidPresenceWatcher _hidWatcher = new();
     private readonly SynchronizationContext _ui;
     private AppSettings _settings = SettingsStore.Load();
     private readonly System.Windows.Forms.Timer _poll;
@@ -63,9 +64,11 @@ internal sealed class TrayApp : IDisposable
         _debounce = new System.Windows.Forms.Timer { Interval = DebounceMs };
         _debounce.Tick += async (_, _) => { _debounce.Stop(); await ScanSafe(); };
 
-        _scanner.Changed += OnScannerChanged;
+        _scanner.Changed += OnDeviceChanged;
+        _hidWatcher.Changed += OnDeviceChanged;
         _ = ScanSafe();
         _scanner.StartWatchers();
+        _hidWatcher.Start();
         Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
         Log.Info($"启动 v{GetType().Assembly.GetName().Version}");
     }
@@ -74,11 +77,11 @@ internal sealed class TrayApp : IDisposable
     private void OnPowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
     {
         if (e.Mode == Microsoft.Win32.PowerModes.Resume)
-            OnScannerChanged();
+            OnDeviceChanged();
     }
 
-    /// <summary>watcher 事件来自任意线程:Post 回 UI 线程重启去抖定时器。</summary>
-    private void OnScannerChanged() => _ui.Post(_ =>
+    /// <summary>watcher 事件(AEP 蓝牙/HID 插拔)来自任意线程:Post 回 UI 线程重启去抖定时器。</summary>
+    private void OnDeviceChanged() => _ui.Post(_ =>
     {
         if (_disposed) return;
         _debounce.Stop();
@@ -153,8 +156,7 @@ internal sealed class TrayApp : IDisposable
             ? "BatteryTray — 无设备"
             : string.Join(" | ", list.Select(d =>
                 $"{d.Name} {(d.BatteryPercent is byte b ? b + "%" : "—")}"));
-        if (text.Length > TooltipMax) text = text[..TooltipMax];
-        _notifyIcon.Text = text;
+        _notifyIcon.Text = TrayRules.Ellipsize(text, TooltipMax);
     }
 
     private void TogglePanel()
@@ -177,6 +179,7 @@ internal sealed class TrayApp : IDisposable
         _poll.Dispose();
         _debounce.Dispose();
         _scanner.Dispose();
+        _hidWatcher.Dispose();
         _panel.Dispose();
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
