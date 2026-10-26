@@ -66,6 +66,7 @@ internal sealed class TrayApp : IDisposable
         _ = ScanSafe();
         _scanner.StartWatchers();
         Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        Log.Info($"启动 v{GetType().Assembly.GetName().Version}");
     }
 
     /// <summary>睡眠唤醒后设备重连需要时间:走去抖刷新,过一会儿自动重新扫描。</summary>
@@ -172,5 +173,6 @@ internal sealed class TrayApp : IDisposable
         _lastHicon = 0;
         _icon?.Dispose();
         _icon = null;
+        Log.Info("退出");
     }
 }
